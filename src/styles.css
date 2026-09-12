@@ -864,19 +864,6 @@ p {
   font-size: 16px;
 }
 
-.duration__input {
-  width: 100%;
-  text-align: center;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 20px;
-  color: #fff;
-  padding: 0;
-}
-
 .micro-copy {
   font-size: 11px;
   font-weight: 800;
@@ -1377,6 +1364,33 @@ p {
 
   .duration__input {
     font-size: 16px;
+  }
+
+  .editor {
+    gap: 12px;
+    padding: 16px 16px 14px;
+    box-shadow: 0 7px 0 var(--ink);
+  }
+
+  .editor__title {
+    font-size: 17px;
+  }
+
+  .stepper__btn {
+    width: 46px;
+    height: 46px;
+    font-size: 23px;
+    border-radius: 15px;
+  }
+
+  .stepper__input {
+    font-size: 32px;
+  }
+
+  .tick-btn {
+    padding: 9px;
+    font-size: 25px;
+    box-shadow: 0 5px 0 var(--ink);
   }
 
   /* Short phones only: the quick-pick strip is a convenience, and dropping it
