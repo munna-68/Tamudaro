@@ -110,7 +110,8 @@ export default function Mascot({ mood = 'idle', size = 132 }) {
         <ellipse cx="160" cy="120" rx="14" ry="10" fill={CHEEK} />
       </motion.g>
 
-      {/* eyebrows */}
+      {/* eyebrows — two shapes cross-faded rather than morphing `d`, because
+          animating the path data directly makes browsers choke. */}
       <motion.g
         stroke={INK}
         strokeWidth="7"
@@ -122,25 +123,23 @@ export default function Mascot({ mood = 'idle', size = 132 }) {
       >
         <motion.path
           d="M 54 60 Q 70 53 86 60"
-          animate={
-            mood === 'focus'
-              ? { d: 'M 54 56 Q 70 62 86 70' }
-              : mood === 'celebrate'
-                ? { d: 'M 54 58 Q 70 46 86 54' }
-                : { d: 'M 54 60 Q 70 53 86 60' }
-          }
-          transition={{ duration: 0.3 }}
+          animate={{ opacity: squint ? 0 : 1 }}
+          transition={{ duration: 0.25 }}
+        />
+        <motion.path
+          d="M 54 56 Q 70 62 86 70"
+          animate={{ opacity: squint ? 1 : 0 }}
+          transition={{ duration: 0.25 }}
         />
         <motion.path
           d="M 114 60 Q 130 53 146 60"
-          animate={
-            mood === 'focus'
-              ? { d: 'M 114 70 Q 130 62 146 56' }
-              : mood === 'celebrate'
-                ? { d: 'M 114 54 Q 130 46 146 58' }
-                : { d: 'M 114 60 Q 130 53 146 60' }
-          }
-          transition={{ duration: 0.3 }}
+          animate={{ opacity: squint ? 0 : 1 }}
+          transition={{ duration: 0.25 }}
+        />
+        <motion.path
+          d="M 114 70 Q 130 62 146 56"
+          animate={{ opacity: squint ? 1 : 0 }}
+          transition={{ duration: 0.25 }}
         />
       </motion.g>
 

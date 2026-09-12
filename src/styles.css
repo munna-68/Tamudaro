@@ -122,7 +122,11 @@ p {
 .app {
   position: relative;
   z-index: 1;
-  min-height: 100dvh;
+  /* A hard height (not min-height) so the middle column has a definite box to
+     flex against — that's what keeps the stats row pinned on short phones
+     instead of being pushed off the bottom. */
+  height: 100dvh;
+  overflow: hidden;
   max-width: 480px;
   margin: 0 auto;
   display: flex;
@@ -140,6 +144,7 @@ p {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .brand {
@@ -231,6 +236,7 @@ p {
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+  overflow: hidden;
 }
 
 .panel {
@@ -239,6 +245,10 @@ p {
   flex-direction: column;
   gap: 10px;
   min-height: 0;
+  /* Safety net: on a very short screen the panel scrolls itself rather than
+     clipping the action button. */
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .ring-area {
@@ -334,7 +344,9 @@ p {
 
 .ring-wrap {
   position: relative;
-  width: min(72vw, 292px);
+  /* Width-driven on normal phones, but capped by viewport height so the whole
+     screen still fits on short devices. */
+  width: min(72vw, 292px, 34dvh);
   aspect-ratio: 1 / 1;
   display: grid;
   place-items: center;
@@ -1115,7 +1127,7 @@ p {
 
 @media (max-height: 700px) {
   .ring-wrap {
-    width: min(62vw, 244px);
+    width: min(64vw, 240px, 32dvh);
   }
 
   .brand__text h1 {
@@ -1123,15 +1135,38 @@ p {
   }
 
   .clock {
-    font-size: clamp(26px, 8.4vw, 34px);
+    font-size: clamp(24px, 8vw, 32px);
+  }
+
+  .lap-readout {
+    font-size: 11.5px;
+    padding: 5px 11px;
+  }
+
+  .chunky--lg {
+    padding: 12px 22px;
+    font-size: 18px;
+  }
+
+  .bubble__value {
+    font-size: 19px;
   }
 
   .form-head__emoji {
-    font-size: 32px;
+    font-size: 30px;
   }
 
   .form-head h2 {
-    font-size: 24px;
+    font-size: 23px;
+  }
+
+  .form-head p {
+    display: none;
+  }
+
+  .duration {
+    padding: 8px 4px;
+    font-size: 18px;
   }
 }
 
