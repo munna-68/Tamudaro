@@ -42,21 +42,26 @@ export function useBreakTimer({ onComplete }) {
     completeHandler.current = onComplete
   }, [onComplete])
 
-  const finishedRef = useRef(false)
+  // The live run, readable from callbacks without re-creating them.
+  const runRef = useRef(run)
+  useEffect(() => {
+    runRef.current = run
+  }, [run])
+
+  // Guards against settling the same break twice. React StrictMode
+  // double-invokes both state updaters and effects in development, which would
+  // otherwise log a break (and fire its celebration) twice.
+  const settledRef = useRef(false)
 
   // Natural completion.
   useEffect(() => {
-    if (!run || !run.active) {
-      finishedRef.current = false
-      return
-    }
-    if (remainingMs <= 0 && !finishedRef.current) {
-      finishedRef.current = true
-      const finished = run
-      setRun(null)
-      removeKey(BREAK_RUN_KEY)
-      completeHandler.current?.({ run: finished, endedEarly: false, actualSec: finished.plannedSec })
-    }
+    if (!run || !run.active) return
+    if (remainingMs > 0 || settledRef.current) return
+    settledRef.current = true
+    const finished = run
+    setRun(null)
+    removeKey(BREAK_RUN_KEY)
+    completeHandler.current?.({ run: finished, endedEarly: false, actualSec: finished.plannedSec })
   }, [run, remainingMs])
 
   useEffect(() => {
@@ -67,7 +72,7 @@ export function useBreakTimer({ onComplete }) {
   const start = useCallback(({ reason, minutes }) => {
     const plannedSec = Math.max(1, Math.round(minutes * 60))
     const startedAt = Date.now()
-    finishedRef.current = false
+    settledRef.current = false
     const next = {
       active: true,
       dayKey: dayKey(),
@@ -80,24 +85,25 @@ export function useBreakTimer({ onComplete }) {
     return next
   }, [])
 
-  /** Bail out early — still logged, just flagged as shortened. */
+  /**
+   * Bail out early — still logged, just flagged as shortened.
+   *
+   * Every side effect happens out here rather than inside the `setRun`
+   * updater: StrictMode runs updaters twice, which would double-log the break.
+   */
   const endEarly = useCallback(() => {
-    setRun((prev) => {
-      if (!prev || !prev.active) return prev
-      const actualSec = Math.max(0, Math.round((Date.now() - prev.startedAt) / 1000))
-      finishedRef.current = true
-      removeKey(BREAK_RUN_KEY)
-      // Fire after this render so we don't set state on a sibling mid-update.
-      window.setTimeout(() => {
-        completeHandler.current?.({ run: prev, endedEarly: true, actualSec })
-      }, 0)
-      return null
-    })
+    const prev = runRef.current
+    if (!prev || !prev.active || settledRef.current) return
+    settledRef.current = true
+    const actualSec = Math.max(0, Math.round((Date.now() - prev.startedAt) / 1000))
+    removeKey(BREAK_RUN_KEY)
+    setRun(null)
+    completeHandler.current?.({ run: prev, endedEarly: true, actualSec })
   }, [])
 
   /** Abandon without logging anything (for the "oops, wrong mode" case). */
   const discard = useCallback(() => {
-    finishedRef.current = true
+    settledRef.current = true
     removeKey(BREAK_RUN_KEY)
     setRun(null)
   }, [])

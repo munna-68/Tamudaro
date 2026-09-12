@@ -48,6 +48,12 @@ export function useFocusTimer({ onLapComplete }) {
     return run.accumulatedMs
   }, [run.running, run.startedAt, run.accumulatedMs, now])
 
+  // The live run, readable from callbacks without re-creating them.
+  const runRef = useRef(run)
+  useEffect(() => {
+    runRef.current = run
+  }, [run])
+
   // Keep the callback in a ref so the lap effect never re-fires just because
   // the parent handed us a new closure.
   const lapHandler = useRef(onLapComplete)
@@ -57,25 +63,30 @@ export function useFocusTimer({ onLapComplete }) {
 
   const lapIndex = Math.floor(elapsedMs / LAP_MS)
 
+  // Highest lap already banked. Kept in a ref rather than read from state so
+  // StrictMode's double-mount can't bank the same lap twice — that would show
+  // up as a phantom extra session in the tally.
+  const firedLapRef = useRef(run.lastLap)
+
   // Bank every lap we just crossed. Usually exactly one, but a throttled or
   // long-suspended tab can cross several at once — we honour all of them so
   // the tally stays honest.
   useEffect(() => {
-    if (lapIndex > run.lastLap) {
-      const firstNew = run.lastLap + 1
-      const count = lapIndex - run.lastLap
-      for (let i = 0; i < count; i += 1) {
-        const lapNumber = firstNew + i
-        lapHandler.current?.({
-          lapNumber,
-          at: Date.now(),
-          // The exact stopwatch reading at that lap boundary.
-          elapsedMsAtLap: lapNumber * LAP_MS,
-        })
-      }
-      setRun((prev) => ({ ...prev, lastLap: lapIndex }))
+    if (lapIndex <= firedLapRef.current) return
+    const firstNew = firedLapRef.current + 1
+    const count = lapIndex - firedLapRef.current
+    firedLapRef.current = lapIndex
+    for (let i = 0; i < count; i += 1) {
+      const lapNumber = firstNew + i
+      lapHandler.current?.({
+        lapNumber,
+        at: Date.now(),
+        // The exact stopwatch reading at that lap boundary.
+        elapsedMsAtLap: lapNumber * LAP_MS,
+      })
     }
-  }, [lapIndex, run.lastLap])
+    setRun((prev) => ({ ...prev, lastLap: Math.max(prev.lastLap, lapIndex) }))
+  }, [lapIndex])
 
   // Persist the run skeleton (not the ticking value).
   useEffect(() => {
@@ -119,6 +130,7 @@ export function useFocusTimer({ onLapComplete }) {
   /** Full stop: back to a cold 0:00 stopwatch. */
   const reset = useCallback(() => {
     removeKey(FOCUS_RUN_KEY)
+    firedLapRef.current = 0
     setRun({
       dayKey: dayKey(),
       running: false,
@@ -134,17 +146,16 @@ export function useFocusTimer({ onLapComplete }) {
    * re-banked into the new day.
    */
   const rolloverDay = useCallback(() => {
-    setRun((prev) => {
-      if (prev.dayKey === dayKey()) return prev
-      const currentElapsed = prev.running && prev.startedAt
+    const today = dayKey()
+    const prev = runRef.current
+    if (!prev || prev.dayKey === today) return
+    const currentElapsed =
+      prev.running && prev.startedAt
         ? prev.accumulatedMs + Math.max(0, Date.now() - prev.startedAt)
         : prev.accumulatedMs
-      return {
-        ...prev,
-        dayKey: dayKey(),
-        lastLap: Math.floor(currentElapsed / LAP_MS),
-      }
-    })
+    const skipTo = Math.floor(currentElapsed / LAP_MS)
+    firedLapRef.current = skipTo
+    setRun((p) => ({ ...p, dayKey: today, lastLap: skipTo }))
   }, [])
 
   const lapProgress = Math.min(1, (elapsedMs % LAP_MS) / LAP_MS)
