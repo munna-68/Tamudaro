@@ -885,6 +885,146 @@ p {
 }
 
 /* --------------------------------------------------------------------------
+   Custom-duration editor
+   The custom tile and this card share a layoutId, so opening the editor is one
+   continuous flight from the grid to the middle of the screen and back.
+   -------------------------------------------------------------------------- */
+
+.scrim--soft {
+  background: rgba(36, 36, 74, 0.34);
+  z-index: 30;
+}
+
+.editor-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 31;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  /* Clicks fall through to the scrim so tapping outside dismisses. */
+  pointer-events: none;
+}
+
+.editor {
+  pointer-events: auto;
+  width: min(86vw, 318px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 20px 20px 18px;
+  background: var(--paper);
+  border: var(--line) solid var(--ink);
+  border-radius: 30px;
+  box-shadow: 0 10px 0 var(--ink);
+}
+
+.editor__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 19px;
+  letter-spacing: -0.3px;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  width: 100%;
+}
+
+.stepper__btn {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 27px;
+  line-height: 1;
+  color: var(--ink);
+  background: var(--card);
+  border: var(--line) solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 0 5px 0 var(--ink);
+}
+
+.stepper__readout {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px 8px 7px;
+  background: var(--red-tint);
+  border: var(--line) solid var(--ink);
+  border-radius: 20px;
+  box-shadow: 0 5px 0 var(--ink);
+}
+
+.stepper__input {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 38px;
+  line-height: 1.05;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.stepper__unit {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--red-dark);
+}
+
+.editor__quick {
+  display: flex;
+  gap: 7px;
+}
+
+.editor__quick .chip {
+  min-width: 46px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip.is-on {
+  background: var(--red);
+  color: #fff;
+  box-shadow: 0 3px 0 var(--red-dark);
+}
+
+.tick-btn {
+  width: 100%;
+  padding: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 29px;
+  line-height: 1;
+  color: #fff;
+  background: var(--green);
+  border: var(--line) solid var(--ink);
+  border-radius: 22px;
+  box-shadow: 0 6px 0 var(--ink);
+  transition: box-shadow 120ms ease;
+}
+
+.tick-btn:active {
+  box-shadow: 0 2px 0 var(--ink);
+}
+
+/* --------------------------------------------------------------------------
    Summary sheet
    -------------------------------------------------------------------------- */
 
