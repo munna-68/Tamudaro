@@ -673,15 +673,34 @@ p {
    -------------------------------------------------------------------------- */
 
 .panel--form {
-  gap: 12px;
+  gap: 0;
   justify-content: flex-start;
   padding-top: 2px;
+  /* Only the fields scroll — the confirm button stays pinned and reachable. */
+  overflow: hidden;
+}
+
+.form-scroll {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Rows keep their natural height — without this the chips strip gets squashed
+   into a sliver when the column runs out of room. */
+.form-scroll > * {
+  flex-shrink: 0;
 }
 
 .form-head {
   text-align: center;
-  padding: 2px 0 4px;
+  padding: 0;
 }
 
 .form-head__emoji {
@@ -763,9 +782,20 @@ p {
 
 .chips {
   display: flex;
-  flex-wrap: wrap;
   gap: 6px;
   margin-top: -4px;
+  /* One scrollable strip instead of two wrapped rows — saves vertical space
+     on short phones. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
 }
 
 .chip {
@@ -777,6 +807,8 @@ p {
   font-weight: 800;
   box-shadow: 0 3px 0 var(--ink);
   transition: transform 110ms ease, box-shadow 110ms ease;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .chip:active {
@@ -1152,21 +1184,70 @@ p {
     font-size: 19px;
   }
 
+  /* The break form is the tallest screen in the app. */
+  .form-scroll {
+    gap: 10px;
+  }
+
+  .form-head {
+    padding: 0 0 2px;
+  }
+
   .form-head__emoji {
-    font-size: 30px;
+    font-size: 24px;
   }
 
   .form-head h2 {
-    font-size: 23px;
+    font-size: 21px;
   }
 
   .form-head p {
     display: none;
   }
 
+  .field__input {
+    padding: 10px 13px;
+  }
+
+  .field__input--area {
+    height: 56px;
+  }
+
+  /* Six across instead of two rows of three — buys back a whole row of
+     vertical space, which is exactly what the duration picker needs on a
+     640px-tall screen. */
+  .duration-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 5px;
+  }
+
   .duration {
-    padding: 8px 4px;
-    font-size: 18px;
+    padding: 8px 1px;
+    font-size: 16px;
+    border-width: 3px;
+    border-radius: 14px;
+    box-shadow: 0 3px 0 var(--ink);
+  }
+
+  .duration em {
+    font-size: 8px;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+  }
+
+  .duration__input {
+    font-size: 16px;
+  }
+
+  /* Short phones only: the quick-pick strip is a convenience, and dropping it
+     is what keeps the duration picker and confirm button above the fold. */
+  .chips {
+    display: none;
+  }
+
+  .chip {
+    padding: 5px 9px;
+    font-size: 11px;
   }
 }
 

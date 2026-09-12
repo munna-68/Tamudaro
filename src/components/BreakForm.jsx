@@ -47,10 +47,11 @@ export default function BreakForm({ onStart, onCancel, compact = false }) {
       initial={{ opacity: 0, y: 26, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -18, scale: 0.98 }}
-      transition={{ type: 'spring', stiffness: 330, damping: 30 }}
-    >
-      <motion.div
-        className="form-head"
+        transition={{ type: 'spring', stiffness: 330, damping: 30 }}
+      >
+        <div className="form-scroll">
+        <motion.div
+          className="form-head"
         animate={{ rotate: [0, -1.5, 1.5, 0] }}
         transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
       >
@@ -132,6 +133,8 @@ export default function BreakForm({ onStart, onCancel, compact = false }) {
             <em>{custom ? 'min' : 'custom'}</em>
           </motion.button>
         </div>
+      </div>
+
       </div>
 
       <div className="action-bar">
