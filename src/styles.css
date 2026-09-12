@@ -124,8 +124,12 @@ p {
   z-index: 1;
   /* A hard height (not min-height) so the middle column has a definite box to
      flex against — that's what keeps the stats row pinned on short phones
-     instead of being pushed off the bottom. */
-  height: 100dvh;
+     instead of being pushed off the bottom.
+     `--vvh` is only set while the on-screen keyboard is up, at which point the
+     shell shrinks to the visible slice so the action bar stays reachable
+     instead of hiding behind the keyboard. Without a keyboard it falls back to
+     100dvh, so the dynamic browser toolbar can't make the layout jitter. */
+  height: var(--vvh, 100dvh);
   overflow: hidden;
   max-width: 480px;
   margin: 0 auto;
@@ -882,13 +886,21 @@ p {
   z-index: 30;
 }
 
+/* Anchored to the *visual* viewport rather than the layout viewport. `inset: 0`
+   looked identical until the keyboard opened, at which point the card stayed
+   centred in the full-height layout box and vanished behind the keys. */
 .editor-layer {
   position: fixed;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: var(--vvt, 0px);
+  height: var(--vvh, 100dvh);
   z-index: 31;
-  display: grid;
-  place-items: center;
-  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Bottom padding leaves room for the card's hard offset shadow. */
+  padding: 18px 24px 34px;
   /* Clicks fall through to the scrim so tapping outside dismisses. */
   pointer-events: none;
 }
@@ -896,6 +908,11 @@ p {
 .editor {
   pointer-events: auto;
   width: min(86vw, 318px);
+  /* Never taller than the visible slice — if the keyboard leaves very little
+     room the card scrolls itself instead of being clipped. */
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1027,11 +1044,12 @@ p {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  /* Lifted clear of the on-screen keyboard when one is up (0px otherwise). */
+  bottom: var(--kb-h, 0px);
   z-index: 21;
   max-width: 480px;
   margin: 0 auto;
-  max-height: 88dvh;
+  max-height: min(88dvh, var(--vvh, 100dvh));
   display: flex;
   flex-direction: column;
   background: var(--paper);
@@ -1281,6 +1299,163 @@ p {
 }
 
 /* --------------------------------------------------------------------------
+   Summary range picker + day-by-day breakdown
+   -------------------------------------------------------------------------- */
+
+.range-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 5px;
+  margin-bottom: 14px;
+  background: var(--paper-2);
+  border: var(--line) solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 0 5px 0 var(--ink);
+}
+
+.range-tab {
+  padding: 8px 4px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13.5px;
+  line-height: 1.1;
+  color: var(--ink-soft);
+  transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease,
+    transform 110ms ease;
+}
+
+.range-tab.is-on {
+  background: var(--green);
+  border-color: var(--ink);
+  color: #fff;
+  box-shadow: 0 3px 0 var(--ink);
+}
+
+.range-tab:active {
+  transform: translateY(2px);
+}
+
+.day-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.day-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 3px 0 var(--ink);
+}
+
+/* A day with nothing on it is still worth showing — just quietly. */
+.day-row.is-blank {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+.day-row__name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.day-row__pills {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.day-row__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.day-row__pill span {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.day-row__pill--green {
+  background: var(--green-tint);
+}
+
+.day-row__pill--red {
+  background: var(--red-tint);
+}
+
+.day-row__mins {
+  flex-shrink: 0;
+  min-width: 52px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Day stamp on a break once the summary spans more than one day. */
+.reason__day {
+  font-style: normal;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+  color: var(--ink-soft);
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------------------
+   On-screen keyboard
+   `data-kb` is set on <html> by useVisualViewport while a keyboard is up.
+   -------------------------------------------------------------------------- */
+
+/* Every one of these would sit behind the keyboard anyway. Dropping them is
+   what buys the break form enough room to keep the field you're typing in
+   above the fold instead of leaving it to scroll itself into view. */
+html[data-kb='1'] .topbar,
+html[data-kb='1'] .stats,
+html[data-kb='1'] .form-head {
+  display: none;
+}
+
+html[data-kb='1'] .app {
+  gap: 8px;
+  padding-top: 8px;
+}
+
+html[data-kb='1'] .tab {
+  padding: 8px;
+  font-size: 14px;
+}
+
+/* --------------------------------------------------------------------------
    Small screens: keep everything on one screen
    -------------------------------------------------------------------------- */
 
@@ -1402,6 +1577,15 @@ p {
   .chip {
     padding: 5px 9px;
     font-size: 11px;
+  }
+
+  .range-tab {
+    padding: 7px 2px;
+    font-size: 12.5px;
+  }
+
+  .day-row {
+    padding: 6px 10px;
   }
 }
 

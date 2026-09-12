@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import ChunkyButton from './ChunkyButton'
@@ -41,6 +41,10 @@ export default function BreakForm({ onStart, onCancel, compact = false }) {
   // Kept as text so the field can be cleared and retyped naturally.
   const [draft, setDraft] = useState('7')
 
+  const inputRef = useRef(null)
+  const tileRef = useRef(null)
+  const restoreFocusRef = useRef(false)
+
   const trimmed = reason.trim()
   const ready = trimmed.length > 0 && minutes > 0
   const draftNumber = clamp(Number(draft) || MIN_MINUTES)
@@ -50,10 +54,23 @@ export default function BreakForm({ onStart, onCancel, compact = false }) {
     setEditorOpen(true)
   }
 
+  /**
+   * Closing always drops the keyboard first. Letting the input unmount while
+   * it still owned focus is what left the page with nothing focused on iOS —
+   * the next tap then only dismissed the keyboard instead of landing on the
+   * button underneath, which read as "focus is broken".
+   */
+  const closeEditor = useCallback(() => {
+    const active = document.activeElement
+    if (active instanceof HTMLElement) active.blur()
+    restoreFocusRef.current = true
+    setEditorOpen(false)
+  }, [])
+
   const confirmEditor = () => {
     setMinutes(clamp(Number(draft) || MIN_MINUTES))
     setCustom(true)
-    setEditorOpen(false)
+    closeEditor()
   }
 
   const step = (delta) => setDraft(String(clamp(draftNumber + delta)))
@@ -62,10 +79,43 @@ export default function BreakForm({ onStart, onCancel, compact = false }) {
   useEffect(() => {
     if (!editorOpen) return undefined
     const onKey = (e) => {
-      if (e.key === 'Escape') setEditorOpen(false)
+      if (e.key === 'Escape') closeEditor()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+  }, [editorOpen, closeEditor])
+
+  // The editor is portalled in, so `autoFocus` fires before the shared-layout
+  // flight has settled and iOS routinely drops it. Focusing from a layout
+  // effect keeps us inside the tap that opened the sheet — the only moment
+  // iOS will agree to raise the keyboard — and `preventScroll` stops it from
+  // yanking the page around behind the card.
+  useLayoutEffect(() => {
+    if (!editorOpen) return undefined
+    const input = inputRef.current
+    if (!input) return undefined
+
+    const grab = () => {
+      input.focus({ preventScroll: true })
+      input.select?.()
+    }
+    grab()
+
+    // One retry for engines that lose focus to the layout animation.
+    const retry = window.setTimeout(() => {
+      if (document.activeElement !== input) grab()
+    }, 120)
+
+    return () => window.clearTimeout(retry)
+  }, [editorOpen])
+
+  // Once the card has flown home, hand focus back to the tile that opened it,
+  // so Tab and the keyboard's "next" still have somewhere sensible to go.
+  useEffect(() => {
+    if (editorOpen || !restoreFocusRef.current) return undefined
+    restoreFocusRef.current = false
+    const t = window.setTimeout(() => tileRef.current?.focus({ preventScroll: true }), 140)
+    return () => window.clearTimeout(t)
   }, [editorOpen])
 
   const editor = (
@@ -78,7 +128,7 @@ export default function BreakForm({ onStart, onCancel, compact = false }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.22 }}
-            onClick={() => setEditorOpen(false)}
+            onClick={closeEditor}
           />
           <div className="editor-layer">
             <motion.div
@@ -104,13 +154,24 @@ export default function BreakForm({ onStart, onCancel, compact = false }) {
 
                 <div className="stepper__readout">
                   <input
+                    ref={inputRef}
                     className="stepper__input"
                     value={draft}
                     onChange={(e) => setDraft(digitsOnly(e.target.value))}
                     onBlur={() => setDraft(String(draftNumber))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        confirmEditor()
+                      }
+                    }}
+                    type="text"
                     inputMode="numeric"
+                    enterKeyHint="done"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                     maxLength={3}
-                    autoFocus
                     aria-label="Break length in minutes"
                   />
                   <span className="stepper__unit">min</span>
@@ -229,6 +290,7 @@ export default function BreakForm({ onStart, onCancel, compact = false }) {
                 same layoutId at once — that's what makes the return trip
                 animate back into this exact slot. */}
             <motion.button
+              ref={tileRef}
               layoutId="custom-duration"
               type="button"
               className={`duration duration--custom ${custom ? 'is-active' : ''}`}

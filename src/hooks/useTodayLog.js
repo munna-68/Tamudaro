@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { dayKey, msUntilNextMidnight } from '../lib/time'
 import { emptyDay, loadLog, saveLog } from '../lib/storage'
+import { DEFAULT_RANGE, isRangeKey, summarizeRange } from '../lib/ranges'
 import { useInterval } from './useRafTick'
 
 const uid = () =>
@@ -15,6 +16,11 @@ const uid = () =>
 export function useTodayLog() {
   const [log, setLog] = useState(() => loadLog())
   const [today, setToday] = useState(() => dayKey())
+  // Which window the summary is looking through. Remembered across sessions so
+  // the app reopens on the view you left it on.
+  const [range, setRangeState] = useState(() =>
+    isRangeKey(log?.settings?.range) ? log.settings.range : DEFAULT_RANGE,
+  )
 
   useEffect(() => {
     saveLog(log)
@@ -113,6 +119,22 @@ export function useTodayLog() {
     }))
   }, [])
 
+  /** Wipe an explicit set of days — backs the summary's range clear. */
+  const clearDays = useCallback((keys) => {
+    if (!keys || keys.length === 0) return
+    setLog((prev) => {
+      const days = { ...prev.days }
+      for (const key of keys) days[key] = emptyDay()
+      return { ...prev, days }
+    })
+  }, [])
+
+  const setRange = useCallback((next) => {
+    if (!isRangeKey(next)) return
+    setRangeState(next)
+    setLog((prev) => ({ ...prev, settings: { ...prev.settings, range: next } }))
+  }, [])
+
   const stats = useMemo(() => {
     const focusSessions = day.focusSessions
     const breaks = day.breaks
@@ -131,14 +153,27 @@ export function useTodayLog() {
     }
   }, [day])
 
+  // Totals for the window the summary is showing — today, the last couple of
+  // days, the week, or the month. `today` is in the deps purely so the window
+  // slides forward when the clock rolls past local midnight.
+  const rangeStats = useMemo(
+    () => summarizeRange(log.days, range),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [log.days, range, today],
+  )
+
   return {
     today,
     day,
     stats,
+    range,
+    setRange,
+    rangeStats,
     settings: log.settings,
     setSoundOn,
     addFocusSession,
     addBreak,
     clearToday,
+    clearDays,
   }
 }

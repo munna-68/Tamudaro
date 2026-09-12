@@ -4,6 +4,8 @@
 // app, it just falls back to a clean slate.
 // ---------------------------------------------------------------------------
 
+import { DEFAULT_RANGE, isRangeKey } from './ranges'
+
 export const LOG_KEY = 'tanudaro.v1.log'
 export const FOCUS_RUN_KEY = 'tanudaro.v1.focusRun'
 export const BREAK_RUN_KEY = 'tanudaro.v1.breakRun'
@@ -40,7 +42,7 @@ export const emptyDay = () => ({ focusSessions: [], breaks: [] })
 export const initialLog = () => ({
   version: 1,
   days: {},
-  settings: { soundOn: true },
+  settings: { soundOn: true, range: DEFAULT_RANGE },
 })
 
 /** Normalise whatever we pulled off disk into a shape the app can trust. */
@@ -57,6 +59,8 @@ export function normalizeLog(raw) {
       }
     }
   }
+  const storedRange = raw.settings && raw.settings.range
+
   return {
     version: 1,
     days,
@@ -65,6 +69,7 @@ export function normalizeLog(raw) {
         raw.settings && typeof raw.settings.soundOn === 'boolean'
           ? raw.settings.soundOn
           : base.settings.soundOn,
+      range: isRangeKey(storedRange) ? storedRange : base.settings.range,
     },
   }
 }

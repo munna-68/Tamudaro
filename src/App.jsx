@@ -10,6 +10,7 @@ import SummarySheet from './components/SummarySheet'
 import { useFocusTimer } from './hooks/useFocusTimer'
 import { useBreakTimer } from './hooks/useBreakTimer'
 import { useTodayLog } from './hooks/useTodayLog'
+import { useVisualViewport } from './hooks/useVisualViewport'
 import { LAP_MS } from './lib/time'
 import { sfx } from './lib/sound'
 import { celebrateFocusLap, celebrateBreakStart, celebrateBreakDone } from './lib/celebrate'
@@ -19,8 +20,22 @@ export default function App() {
   const [celebrate, setCelebrate] = useState(null)
   const [sheetOpen, setSheetOpen] = useState(false)
 
-  const { today, day, stats, settings, setSoundOn, addFocusSession, addBreak, clearToday } =
-    useTodayLog()
+  // Keeps fixed overlays (the custom-duration card, the summary sheet) inside
+  // the visible area once the on-screen keyboard is up.
+  useVisualViewport()
+
+  const {
+    today,
+    stats,
+    range,
+    setRange,
+    rangeStats,
+    settings,
+    setSoundOn,
+    addFocusSession,
+    addBreak,
+    clearDays,
+  } = useTodayLog()
 
   const soundRef = useRef(settings.soundOn)
   useEffect(() => {
@@ -223,13 +238,11 @@ export default function App() {
       <SummarySheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        stats={stats}
-        day={day}
+        range={range}
+        onRangeChange={setRange}
+        rangeStats={rangeStats}
         today={today}
-        onClear={() => {
-          clearToday()
-          setSheetOpen(false)
-        }}
+        onClear={() => clearDays(rangeStats.keys)}
       />
     </div>
   )
