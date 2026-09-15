@@ -53,10 +53,17 @@ export function useBreakTimer({ onComplete }) {
   // otherwise log a break (and fire its celebration) twice.
   const settledRef = useRef(false)
 
+  // Monotonic counter so the natural-completion effect can tell whether the
+  // run it captured is still the "current" break. Without this, calling start()
+  // (which resets settledRef) while a previous break's effect is still pending
+  // would let the old effect fire again and log a duplicate.
+  const breakGeneration = useRef(0)
+
   // Natural completion.
   useEffect(() => {
     if (!run || !run.active) return
     if (remainingMs > 0 || settledRef.current) return
+    if (run.generation != null && breakGeneration.current !== run.generation) return
     settledRef.current = true
     const finished = run
     setRun(null)
@@ -73,6 +80,7 @@ export function useBreakTimer({ onComplete }) {
     const plannedSec = Math.max(1, Math.round(minutes * 60))
     const startedAt = Date.now()
     settledRef.current = false
+    breakGeneration.current += 1
     const next = {
       active: true,
       dayKey: dayKey(),
@@ -80,6 +88,7 @@ export function useBreakTimer({ onComplete }) {
       plannedSec,
       startedAt,
       endsAt: startedAt + plannedSec * 1000,
+      generation: breakGeneration.current,
     }
     setRun(next)
     return next
@@ -94,6 +103,7 @@ export function useBreakTimer({ onComplete }) {
   const endEarly = useCallback(() => {
     const prev = runRef.current
     if (!prev || !prev.active || settledRef.current) return
+    if (prev.generation != null && breakGeneration.current !== prev.generation) return
     settledRef.current = true
     const actualSec = Math.max(0, Math.round((Date.now() - prev.startedAt) / 1000))
     removeKey(BREAK_RUN_KEY)

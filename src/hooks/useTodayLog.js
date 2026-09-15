@@ -85,6 +85,7 @@ export function useTodayLog() {
       const key = dayKey(new Date(startedAt))
       setLog((prev) => {
         const existing = prev.days[key] || emptyDay()
+        if (existing.breaks.some((b) => b.startedAt === startedAt)) return prev
         const entry = {
           id: uid(),
           reason,
