@@ -6,6 +6,8 @@ import FocusPanel from './components/FocusPanel'
 import BreakForm from './components/BreakForm'
 import BreakPanel from './components/BreakPanel'
 import StatsRow from './components/StatsRow'
+import PlanCard from './components/PlanCard'
+import PlanSheet from './components/PlanSheet'
 import SummarySheet from './components/SummarySheet'
 import { useFocusTimer } from './hooks/useFocusTimer'
 import { useBreakTimer } from './hooks/useBreakTimer'
@@ -19,6 +21,7 @@ export default function App() {
   const [mode, setMode] = useState('focus')
   const [celebrate, setCelebrate] = useState(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [planOpen, setPlanOpen] = useState(false)
 
   // Keeps fixed overlays (the custom-duration card, the summary sheet) inside
   // the visible area once the on-screen keyboard is up.
@@ -27,6 +30,8 @@ export default function App() {
   const {
     today,
     stats,
+    plan,
+    planStats,
     range,
     setRange,
     rangeStats,
@@ -35,6 +40,15 @@ export default function App() {
     addFocusSession,
     addBreak,
     clearDays,
+    addTask,
+    updateTask,
+    nudgeTask,
+    toggleTask,
+    removeTask,
+    setActiveTask,
+    moveTask,
+    clearDoneTasks,
+    bankTaskFocus,
   } = useTodayLog()
 
   const soundRef = useRef(settings.soundOn)
@@ -96,11 +110,14 @@ export default function App() {
         lapMs: LAP_MS,
         focusMsAtLapEnd: elapsedMsAtLap,
       })
+      // The same lap, credited to whatever task is marked "now" — the tally
+      // and the task always agree on how much time was earned.
+      bankTaskFocus(LAP_MS)
       fireCelebration('focus')
       if (soundRef.current) sfx.focusComplete()
       celebrateFocusLap()
     },
-    [addFocusSession, fireCelebration],
+    [addFocusSession, bankTaskFocus, fireCelebration],
   )
 
   const focusTimer = useFocusTimer({ onLapComplete: handleLapComplete })
@@ -147,6 +164,10 @@ export default function App() {
 
   const openSummary = useCallback(() => {
     setSheetOpen(true)
+  }, [])
+
+  const openPlan = useCallback(() => {
+    setPlanOpen(true)
   }, [])
 
   return (
@@ -233,7 +254,25 @@ export default function App() {
         </AnimatePresence>
 
         <StatsRow stats={stats} />
+
+        <PlanCard stats={planStats} onOpen={openPlan} />
       </main>
+
+      <PlanSheet
+        open={planOpen}
+        onClose={() => setPlanOpen(false)}
+        plan={plan}
+        stats={planStats}
+        autoAdd={planStats.total === 0}
+        onAdd={addTask}
+        onUpdate={updateTask}
+        onNudge={nudgeTask}
+        onToggle={toggleTask}
+        onRemove={removeTask}
+        onSetActive={setActiveTask}
+        onMove={moveTask}
+        onClearDone={clearDoneTasks}
+      />
 
       <SummarySheet
         open={sheetOpen}

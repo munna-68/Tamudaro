@@ -31,6 +31,8 @@
   --yellow-tint: #fff3cf;
 
   --blue: #22a7f0;
+  --blue-dark: #0d7fbd;
+  --blue-tint: #e0f3fe;
   --purple: #b266ff;
   --pink: #ff8fd0;
 
@@ -673,6 +675,527 @@ p {
 }
 
 /* --------------------------------------------------------------------------
+   Today's plan
+   The card sits directly under the stats row so the plan stays visible while
+   the timer runs; everything you can change lives in the sheet behind it.
+   -------------------------------------------------------------------------- */
+
+.plan-card {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+  padding: 11px 14px 12px;
+  text-align: left;
+  background: var(--card);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 var(--shadow-y) 0 var(--ink);
+}
+
+/* Nothing planned yet — an invitation, not a box you have to fill in. */
+.plan-card.is-empty {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.plan-card.is-complete {
+  background: var(--green-tint);
+}
+
+.plan-card__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan-card__title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-card__badge {
+  flex-shrink: 0;
+  padding: 2px 9px;
+  background: var(--blue-tint);
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-card__badge.is-done {
+  background: var(--green);
+  color: #fff;
+}
+
+.plan-card__chev {
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ink-faint);
+}
+
+.plan-card__bar {
+  display: block;
+  height: 14px;
+  background: var(--ring-track);
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.plan-card__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--green);
+}
+
+.plan-card.is-complete .plan-card__fill {
+  background: var(--green-dark);
+}
+
+.plan-card__meta {
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+   Plan sheet
+   -------------------------------------------------------------------------- */
+
+/* The add bar is pinned to the top of the scroll body rather than the bottom,
+   so the on-screen keyboard never covers the field you're typing into. */
+.add-task {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 14px 0 16px;
+  padding: 12px;
+  background: var(--paper-2);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 5px 0 var(--ink);
+}
+
+.add-task__row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.add-task__input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 13px;
+  background: var(--card);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 0 var(--ink);
+  font-weight: 800;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.add-task__input::placeholder {
+  color: var(--ink-faint);
+  font-weight: 700;
+}
+
+.add-task__input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 4px 0 var(--blue-dark);
+}
+
+.add-task__go {
+  flex-shrink: 0;
+  width: 52px;
+  display: grid;
+  place-items: center;
+  font-size: 23px;
+  line-height: 1;
+  color: #fff;
+  background: var(--green);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 0 var(--ink);
+  transition: background 160ms ease;
+}
+
+.add-task__go.is-off {
+  background: var(--ring-track);
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+.add-task__meta {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.add-task__label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.add-task__hint {
+  font-size: 10.5px;
+  font-weight: 900;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.add-task__cancel {
+  align-self: flex-start;
+  padding: 2px 4px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--ink-faint);
+  text-decoration: underline;
+}
+
+.add-task__trigger {
+  width: 100%;
+  margin: 14px 0 16px;
+  padding: 14px;
+  background: var(--paper-2);
+  border: var(--line) dashed var(--ink);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+/* Horizontally scrollable like the break form's quick reasons, so the unit
+   labels never wrap into a second row. Slightly smaller than the break form's
+   chips — four of them have to fit on a 390px sheet. */
+.chips--units {
+  margin-top: 0;
+  padding-bottom: 2px;
+}
+
+.chips--units .chip {
+  padding: 5px 10px;
+  font-size: 11.5px;
+}
+
+/* Below ~370px the strip does overflow. Fade the right edge so it reads as
+   "there's more" rather than as a clipped label. */
+@media (max-width: 370px) {
+  .chips--units {
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 22px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 22px), transparent 100%);
+  }
+}
+
+.mini-stepper {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 var(--ink);
+}
+
+.mini-stepper button {
+  width: 30px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1;
+  border-radius: 999px;
+}
+
+.mini-stepper button:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.mini-stepper span {
+  min-width: 28px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.task {
+  background: var(--card);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 0 var(--ink);
+  overflow: hidden;
+}
+
+.task.is-done {
+  background: var(--green-tint);
+}
+
+.task.is-active {
+  border-color: var(--green-dark);
+  box-shadow: 0 4px 0 var(--green-dark);
+}
+
+.task__row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+}
+
+.task__check {
+  flex-shrink: 0;
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 900;
+  color: #fff;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: 0 3px 0 var(--ink);
+}
+
+.task.is-done .task__check {
+  background: var(--green);
+}
+
+.task__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+}
+
+.task__title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.task.is-done .task__title {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.task__sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.task__bar {
+  display: block;
+  height: 7px;
+  background: var(--ring-track);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.task__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--green);
+}
+
+.task.is-done .task__fill {
+  background: var(--green-dark);
+}
+
+.task__now {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--paper-2);
+  border: 3px solid var(--ink);
+  border-radius: 13px;
+  box-shadow: 0 3px 0 var(--ink);
+}
+
+.task.is-active .task__now {
+  background: var(--green);
+  color: #fff;
+}
+
+.task__now:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.task__edit {
+  overflow: hidden;
+}
+
+.task__edit-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 11px 12px 12px;
+  border-top: 3px dashed rgba(36, 36, 74, 0.16);
+}
+
+.task__edit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.task__edit-label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.task__edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.task__edit-actions .chunky--full {
+  flex: 1;
+}
+
+/* Plan rows inside the summary sheet — read-only history, so they're flatter
+   than the live task rows. */
+.plan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.plan-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 3px 0 var(--ink);
+}
+
+.plan-row.is-done {
+  background: var(--green-tint);
+}
+
+.plan-row__tick {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 900;
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  background: var(--card);
+}
+
+.plan-row.is-done .plan-row__tick {
+  background: var(--green);
+  color: #fff;
+}
+
+.plan-row__title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-row__prog {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-row__prog em {
+  font-style: normal;
+  color: var(--ink-faint);
+}
+
+.plan-row__time {
+  flex-shrink: 0;
+  min-width: 46px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
    Break form
    -------------------------------------------------------------------------- */
 
@@ -1145,6 +1668,10 @@ p {
   background: var(--yellow-tint);
 }
 
+.total--blue {
+  background: var(--blue-tint);
+}
+
 .total__num {
   font-family: var(--font-display);
   font-weight: 600;
@@ -1198,6 +1725,10 @@ p {
   border: 3px solid var(--ink);
   font-size: 11px;
   font-weight: 900;
+}
+
+.sheet__count--green {
+  background: var(--green);
 }
 
 .reason-list {
@@ -1408,6 +1939,10 @@ p {
   background: var(--red-tint);
 }
 
+.day-row__pill--blue {
+  background: var(--blue-tint);
+}
+
 .day-row__mins {
   flex-shrink: 0;
   min-width: 52px;
@@ -1441,6 +1976,7 @@ p {
    above the fold instead of leaving it to scroll itself into view. */
 html[data-kb='1'] .topbar,
 html[data-kb='1'] .stats,
+html[data-kb='1'] .plan-card,
 html[data-kb='1'] .form-head {
   display: none;
 }
@@ -1484,6 +2020,48 @@ html[data-kb='1'] .tab {
 
   .bubble__value {
     font-size: 19px;
+  }
+
+  /* The plan card is a permanent fixture under the stats row, so on a short
+     screen it gives up its meta line and tightens up rather than shoving the
+     ring off the bottom. */
+  .plan-card {
+    gap: 5px;
+    padding: 8px 12px 9px;
+  }
+
+  .plan-card__title {
+    font-size: 14px;
+  }
+
+  .plan-card__meta {
+    display: none;
+  }
+
+  .plan-card__bar {
+    height: 11px;
+  }
+
+  .task__row {
+    padding: 8px 9px;
+  }
+
+  .task__title {
+    font-size: 14px;
+  }
+
+  .task__edit-inner {
+    gap: 8px;
+    padding: 9px 10px 10px;
+  }
+
+  .add-task {
+    gap: 7px;
+    padding: 10px;
+  }
+
+  .plan-row {
+    padding: 6px 9px;
   }
 
   /* The break form is the tallest screen in the app. */

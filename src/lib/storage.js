@@ -5,6 +5,7 @@
 // ---------------------------------------------------------------------------
 
 import { DEFAULT_RANGE, isRangeKey } from './ranges'
+import { emptyPlan, normalizePlan } from './plan'
 
 export const LOG_KEY = 'tanudaro.v1.log'
 export const FOCUS_RUN_KEY = 'tanudaro.v1.focusRun'
@@ -37,7 +38,7 @@ export function removeKey(key) {
   }
 }
 
-export const emptyDay = () => ({ focusSessions: [], breaks: [] })
+export const emptyDay = () => ({ focusSessions: [], breaks: [], plan: emptyPlan() })
 
 export const initialLog = () => ({
   version: 1,
@@ -56,6 +57,9 @@ export function normalizeLog(raw) {
       days[key] = {
         focusSessions: Array.isArray(value.focusSessions) ? value.focusSessions : [],
         breaks: Array.isArray(value.breaks) ? value.breaks : [],
+        // Days written before the plan existed simply have no tasks — which is
+        // exactly what an empty plan is.
+        plan: normalizePlan(value.plan),
       }
     }
   }

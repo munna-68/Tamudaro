@@ -10,15 +10,23 @@ import {
 } from '../lib/time'
 import { RANGE_OPTIONS, dayLabel, rangeOption, rangeSpanLabel } from '../lib/ranges'
 
-const BLANK_DAY = { focusCount: 0, breakCount: 0, focusMs: 0, breakSec: 0 }
+const BLANK_DAY = {
+  focusCount: 0,
+  breakCount: 0,
+  focusMs: 0,
+  breakSec: 0,
+  tasksTotal: 0,
+  tasksDone: 0,
+}
 
 /**
  * The summary, as a pull-up sheet you can drag back down.
  *
  * It opens on the last couple of days and can be widened to the week or the
- * month — totals on top, then a day-by-day breakdown, then every break with
- * the reason attached. The reasons are the whole point: they're what let you
- * look back and remember why you stepped away.
+ * month — totals on top, then a day-by-day breakdown, then what you planned
+ * and how far you got, then every break with the reason attached. The reasons
+ * are the whole point: they're what let you look back and remember why you
+ * stepped away.
  */
 export default function SummarySheet({
   open,
@@ -33,10 +41,11 @@ export default function SummarySheet({
   const [confirming, setConfirming] = useState(false)
 
   const option = rangeOption(range)
-  const { breaks, keys, perDay } = rangeStats
+  const { breaks, keys, perDay, planTasks } = rangeStats
   const multiDay = keys.length > 1
   const span = rangeSpanLabel(keys)
-  const hasAnything = rangeStats.focusCount > 0 || rangeStats.breakCount > 0
+  const hasAnything =
+    rangeStats.focusCount > 0 || rangeStats.breakCount > 0 || rangeStats.tasksTotal > 0
 
   // Switching windows (or closing the sheet) cancels a pending clear — the
   // confirmation must never survive a context change.
@@ -193,7 +202,9 @@ export default function SummarySheet({
                     {rows.map((d, i) => (
                       <motion.li
                         key={d.key}
-                        className={`day-row ${d.focusCount || d.breakCount ? '' : 'is-blank'}`}
+                        className={`day-row ${
+                          d.focusCount || d.breakCount || d.tasksTotal ? '' : 'is-blank'
+                        }`}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{
@@ -223,6 +234,17 @@ export default function SummarySheet({
                             <span aria-hidden="true">🫧</span>
                             {d.breakCount}
                           </span>
+                          {d.tasksTotal > 0 && (
+                            <span
+                              className="day-row__pill day-row__pill--blue"
+                              title={`${d.tasksDone} of ${d.tasksTotal} planned ${
+                                d.tasksTotal === 1 ? 'task' : 'tasks'
+                              } done`}
+                            >
+                              <span aria-hidden="true">📝</span>
+                              {d.tasksDone}/{d.tasksTotal}
+                            </span>
+                          )}
                         </span>
                         <span className="day-row__mins">
                           {d.focusMs ? formatMinutes(d.focusMs / 60000) : '—'}
@@ -230,6 +252,86 @@ export default function SummarySheet({
                       </motion.li>
                     ))}
                   </ul>
+                </>
+              )}
+
+              <h3 className="sheet__section">
+                What you planned
+                {rangeStats.tasksTotal > 0 && (
+                  <span className="sheet__count sheet__count--green">
+                    {rangeStats.tasksDone}/{rangeStats.tasksTotal}
+                  </span>
+                )}
+              </h3>
+
+              {planTasks.length === 0 ? (
+                <div className="empty">
+                  <motion.span
+                    className="empty__emoji"
+                    animate={{ y: [0, -8, 0], rotate: [0, 8, -8, 0] }}
+                    transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
+                    aria-hidden="true"
+                  >
+                    📝
+                  </motion.span>
+                  <p>
+                    {multiDay
+                      ? 'Nothing was planned in this stretch. Naming what you meant to cover is half of getting it covered.'
+                      : 'Nothing planned today yet. Naming what you meant to cover is half of getting it covered.'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <ul className="plan-list">
+                    {planTasks.map((t, i) => {
+                      const done = t.done >= t.target
+                      return (
+                        <motion.li
+                          key={t.id}
+                          className={`plan-row ${done ? 'is-done' : ''}`}
+                          initial={{ opacity: 0, x: -14 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{
+                            delay: Math.min(i * 0.04, 0.28),
+                            type: 'spring',
+                            stiffness: 420,
+                            damping: 30,
+                          }}
+                        >
+                          <span className="plan-row__tick" aria-hidden="true">
+                            {done ? '✓' : '○'}
+                          </span>
+                          <span className="plan-row__title">{t.title}</span>
+                          {multiDay && (
+                            <em className="reason__day">{dayLabel(t.day, today)}</em>
+                          )}
+                          <span className="plan-row__prog">
+                            {t.done}/{t.target}
+                            {t.unit !== 'none' && <em> {t.unit}</em>}
+                          </span>
+                          {t.focusMs > 0 && (
+                            <span className="plan-row__time">
+                              {formatMinutes(t.focusMs / 60000)}
+                            </span>
+                          )}
+                        </motion.li>
+                      )
+                    })}
+                  </ul>
+
+                  <p className="sheet__line">
+                    <strong>{rangeStats.tasksDone}</strong> of{' '}
+                    <strong>{rangeStats.tasksTotal}</strong>{' '}
+                    {rangeStats.tasksTotal === 1 ? 'task' : 'tasks'} ticked off
+                    {rangeStats.planFocusMs > 0 && (
+                      <>
+                        , with{' '}
+                        <strong>{formatMinutes(rangeStats.planFocusMs / 60000)}</strong> of focus
+                        landed on them
+                      </>
+                    )}
+                    .
+                  </p>
                 </>
               )}
 

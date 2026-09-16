@@ -49,6 +49,7 @@ export function rangeDayKeys(rangeKey, now = new Date()) {
 const rollUpDay = (day) => {
   const focusSessions = day?.focusSessions || []
   const breaks = day?.breaks || []
+  const tasks = day?.plan?.tasks || []
   return {
     focusCount: focusSessions.length,
     breakCount: breaks.length,
@@ -57,15 +58,31 @@ const rollUpDay = (day) => {
     focusMs: focusSessions.reduce((sum, s) => sum + (s.lapMs || 0), 0),
     breakSec: breaks.reduce((sum, b) => sum + (b.actualSec || 0), 0),
     breaks,
+    tasks,
+    tasksTotal: tasks.length,
+    tasksDone: tasks.filter((t) => t.done >= t.target).length,
+    // Focus time that landed on a task, which is a subset of `focusMs` — laps
+    // taken with nothing marked "now" belong to the tally but to no task.
+    planFocusMs: tasks.reduce((sum, t) => sum + (t.focusMs || 0), 0),
   }
 }
 
 /** Roll every day in the range up into one set of totals. */
 export function summarizeRange(days, rangeKey, now = new Date()) {
   const keys = rangeDayKeys(rangeKey, now)
-  const totals = { focusCount: 0, breakCount: 0, totalFocusMs: 0, totalBreakSec: 0 }
+  const totals = {
+    focusCount: 0,
+    breakCount: 0,
+    totalFocusMs: 0,
+    totalBreakSec: 0,
+    tasksTotal: 0,
+    tasksDone: 0,
+    planFocusMs: 0,
+  }
   const perDay = []
   const breaks = []
+  const planTasks = []
+  let focusDays = 0
 
   for (const key of keys) {
     const d = rollUpDay(days[key])
@@ -73,17 +90,26 @@ export function summarizeRange(days, rangeKey, now = new Date()) {
     totals.breakCount += d.breakCount
     totals.totalFocusMs += d.focusMs
     totals.totalBreakSec += d.breakSec
+    totals.tasksTotal += d.tasksTotal
+    totals.tasksDone += d.tasksDone
+    totals.planFocusMs += d.planFocusMs
+    if (d.focusCount) focusDays += 1
     if (d.breaks.length) breaks.push(...d.breaks)
+    // Newest first, matching `keys`, so the summary lists the latest plan on top.
+    for (const task of d.tasks) planTasks.push({ ...task, day: key })
 
     // Days with nothing on them are dropped here; callers that want the blank
-    // days back can rebuild them from `keys`.
-    if (d.focusCount || d.breakCount) {
+    // days back can rebuild them from `keys`. A day where you planned but
+    // never started the timer is *not* nothing — that's the day worth seeing.
+    if (d.focusCount || d.breakCount || d.tasksTotal) {
       perDay.push({
         key,
         focusCount: d.focusCount,
         breakCount: d.breakCount,
         focusMs: d.focusMs,
         breakSec: d.breakSec,
+        tasksTotal: d.tasksTotal,
+        tasksDone: d.tasksDone,
       })
     }
   }
@@ -92,9 +118,12 @@ export function summarizeRange(days, rangeKey, now = new Date()) {
     ...totals,
     keys,
     perDay,
+    planTasks,
     breaks: breaks.slice().sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0)),
     longestBreakSec: breaks.reduce((max, b) => Math.max(max, b.actualSec || 0), 0),
-    activeDays: perDay.length,
+    // Days that actually banked a lap — the sentence this feeds is about laps,
+    // so a plan-only day mustn't inflate it.
+    activeDays: focusDays,
   }
 }
 

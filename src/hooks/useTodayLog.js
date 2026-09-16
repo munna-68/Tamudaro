@@ -2,6 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { dayKey, msUntilNextMidnight } from '../lib/time'
 import { emptyDay, loadLog, saveLog } from '../lib/storage'
 import { DEFAULT_RANGE, isRangeKey, summarizeRange } from '../lib/ranges'
+import {
+  applyTaskPatch,
+  emptyPlan,
+  isTaskDone,
+  makeTask,
+  planStats,
+  toggleTaskDone,
+  withDone,
+} from '../lib/plan'
 import { useInterval } from './useRafTick'
 
 const uid = () =>
@@ -111,6 +120,126 @@ export function useTodayLog() {
     setLog((prev) => ({ ...prev, settings: { ...prev.settings, soundOn } }))
   }, [])
 
+  // --- today's plan -------------------------------------------------------
+  /**
+   * Every plan edit funnels through here: read today's plan, hand it to a pure
+   * mutator, write the result back. Without it each of the eight actions below
+   * would re-implement the same immutable dance and one of them would get it
+   * subtly wrong.
+   *
+   * The plan is always written to *today*, never to the day a sheet happened to
+   * be opened on — you plan the day you're in.
+   */
+  const updatePlan = useCallback((mutate) => {
+    const key = dayKey()
+    setLog((prev) => {
+      const existing = prev.days[key] || emptyDay()
+      return {
+        ...prev,
+        days: {
+          ...prev.days,
+          [key]: { ...existing, plan: mutate(existing.plan || emptyPlan()) },
+        },
+      }
+    })
+  }, [])
+
+  /** Tasks are completed, not removed — clearing the active flag is enough. */
+  const patchTasks = (plan, id, fn) => ({
+    ...plan,
+    tasks: plan.tasks.map((task) => (task.id === id ? fn(task) : task)),
+  })
+
+  const addTask = useCallback(
+    ({ title, target = 1, unit = 'none' }) => {
+      const clean = String(title ?? '').trim()
+      if (!clean) return null
+      const id = uid()
+      updatePlan((plan) => ({
+        ...plan,
+        tasks: [...plan.tasks, makeTask({ id, title: clean, target, unit })],
+      }))
+      return id
+    },
+    [updatePlan],
+  )
+
+  const updateTask = useCallback(
+    (id, patch) => updatePlan((plan) => patchTasks(plan, id, (task) => applyTaskPatch(task, patch))),
+    [updatePlan],
+  )
+
+  const nudgeTask = useCallback(
+    (id, delta) =>
+      updatePlan((plan) =>
+        patchTasks(plan, id, (task) => withDone(task, task.done + delta)),
+      ),
+    [updatePlan],
+  )
+
+  const toggleTask = useCallback(
+    (id) => updatePlan((plan) => patchTasks(plan, id, (task) => toggleTaskDone(task))),
+    [updatePlan],
+  )
+
+  const removeTask = useCallback(
+    (id) =>
+      updatePlan((plan) => ({
+        tasks: plan.tasks.filter((task) => task.id !== id),
+        activeId: plan.activeId === id ? null : plan.activeId,
+      })),
+    [updatePlan],
+  )
+
+  /** Mark a task as the one the stopwatch is feeding. Tapping it again stops. */
+  const setActiveTask = useCallback(
+    (id) => updatePlan((plan) => ({ ...plan, activeId: plan.activeId === id ? null : id })),
+    [updatePlan],
+  )
+
+  const moveTask = useCallback(
+    (id, delta) =>
+      updatePlan((plan) => {
+        const from = plan.tasks.findIndex((task) => task.id === id)
+        const to = from + delta
+        if (from < 0 || to < 0 || to >= plan.tasks.length) return plan
+        const tasks = plan.tasks.slice()
+        ;[tasks[from], tasks[to]] = [tasks[to], tasks[from]]
+        return { ...plan, tasks }
+      }),
+    [updatePlan],
+  )
+
+  /** Clear the ticked ones off the list so the rest has room to breathe. */
+  const clearDoneTasks = useCallback(
+    () =>
+      updatePlan((plan) => ({
+        tasks: plan.tasks.filter((task) => !isTaskDone(task)),
+        activeId: plan.activeId,
+      })),
+    [updatePlan],
+  )
+
+  /**
+   * A finished focus lap lands on whatever task is marked "now". Laps are
+   * banked at their full length everywhere else in the app, so they're banked
+   * at their full length here too — the number on the task is the same number
+   * the stats row counted.
+   */
+  const bankTaskFocus = useCallback(
+    (ms) => {
+      if (!(ms > 0)) return
+      updatePlan((plan) => {
+        if (!plan.activeId) return plan
+        return patchTasks(plan, plan.activeId, (task) => ({
+          ...task,
+          focusMs: (task.focusMs || 0) + ms,
+        }))
+      })
+    },
+    [updatePlan],
+  )
+
   /** Wipe today only — yesterday survives. */
   const clearToday = useCallback(() => {
     const key = dayKey()
@@ -135,6 +264,10 @@ export function useTodayLog() {
     setRangeState(next)
     setLog((prev) => ({ ...prev, settings: { ...prev.settings, range: next } }))
   }, [])
+
+  const plan = day.plan || emptyPlan()
+
+  const todayPlan = useMemo(() => planStats(plan), [plan])
 
   const stats = useMemo(() => {
     const focusSessions = day.focusSessions
@@ -167,6 +300,8 @@ export function useTodayLog() {
     today,
     day,
     stats,
+    plan,
+    planStats: todayPlan,
     range,
     setRange,
     rangeStats,
@@ -176,5 +311,14 @@ export function useTodayLog() {
     addBreak,
     clearToday,
     clearDays,
+    addTask,
+    updateTask,
+    nudgeTask,
+    toggleTask,
+    removeTask,
+    setActiveTask,
+    moveTask,
+    clearDoneTasks,
+    bankTaskFocus,
   }
 }
