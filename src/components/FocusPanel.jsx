@@ -1,6 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import TimerRing from './TimerRing'
-import Mascot from './Mascot'
 import ChunkyButton from './ChunkyButton'
 import { LAP_MS, LAP_MINUTES, formatClock } from '../lib/time'
 
@@ -15,8 +14,6 @@ export default function FocusPanel({ timer, celebrate, onTakeBreak }) {
   const { elapsedMs, lapProgress, lapIndex, running, hasStarted } = timer
   const lapElapsed = elapsedMs % LAP_MS
 
-  const mood = celebrate ? 'celebrate' : running ? 'focus' : hasStarted ? 'sleep' : 'idle'
-
   return (
     <motion.div
       className="panel"
@@ -27,7 +24,6 @@ export default function FocusPanel({ timer, celebrate, onTakeBreak }) {
     >
       <div className="ring-area">
         <TimerRing progress={lapProgress} accent={FOCUS_GREEN} celebrate={celebrate}>
-          <Mascot mood={mood} size={120} />
           <motion.div
             className="clock"
             animate={celebrate ? { scale: [1, 1.14, 1], rotate: [0, -3, 3, 0] } : { scale: 1 }}

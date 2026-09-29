@@ -393,12 +393,6 @@ p {
   pointer-events: none;
 }
 
-.ring-inner .mascot {
-  width: 52%;
-  height: auto;
-  margin-bottom: -2px;
-}
-
 .clock {
   font-family: var(--font-display);
   font-weight: 600;

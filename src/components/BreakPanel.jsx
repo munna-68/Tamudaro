@@ -1,6 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import TimerRing from './TimerRing'
-import Mascot from './Mascot'
 import ChunkyButton from './ChunkyButton'
 import { formatClock, formatClockFromSeconds } from '../lib/time'
 
@@ -15,7 +14,6 @@ export const BREAK_RED = '#FF4B4B'
  */
 export default function BreakPanel({ breakTimer, celebrate, onEndEarly }) {
   const { remainingMs, plannedSec, reason, progress, elapsedMs } = breakTimer
-  const mood = celebrate ? 'celebrate' : 'break'
   const nearlyDone = remainingMs <= 60000
 
   return (
@@ -33,7 +31,6 @@ export default function BreakPanel({ breakTimer, celebrate, onEndEarly }) {
           celebrate={celebrate}
           milestones={false}
         >
-          <Mascot mood={mood} size={120} />
           <motion.div
             className="clock"
             animate={
